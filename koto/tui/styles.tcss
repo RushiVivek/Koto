@@ -1,0 +1,149 @@
+/* koto TUI styles */
+
+Screen {
+    background: $surface;
+}
+
+#main {
+    layout: horizontal;
+    height: 1fr;
+}
+
+WorkspaceTree {
+    width: 32;
+    border-right: tall $primary 30%;
+    padding: 0 1;
+}
+
+TodoTree {
+    width: 1fr;
+    padding: 0 1;
+}
+
+WorkspaceTree:focus,
+TodoTree:focus {
+    border-right: tall $primary;
+}
+
+/* Use Textual's built-in cursor styling so it follows the active theme.
+   `render_label` passes the style through, so the cursor is visible. */
+
+#toast {
+    dock: bottom;
+    height: auto;
+    padding: 0 1;
+    background: $error 30%;
+    color: $text;
+    text-style: bold;
+    display: none;
+}
+
+#toast.visible {
+    display: block;
+}
+
+#toast.info {
+    background: $primary 30%;
+}
+
+InputModal {
+    align: center middle;
+}
+
+InputModal > #dialog {
+    width: 60;
+    height: auto;
+    padding: 1 2;
+    border: round $primary;
+    background: $surface;
+}
+
+InputModal #title {
+    color: $primary;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+InputModal Input {
+    margin-bottom: 1;
+}
+
+InputModal #buttons {
+    layout: horizontal;
+    height: 3;
+    align: right middle;
+}
+
+InputModal Button {
+    margin-left: 1;
+}
+
+ConfirmModal {
+    align: center middle;
+}
+
+ConfirmModal > #dialog {
+    width: 60;
+    height: auto;
+    padding: 1 2;
+    border: round $error;
+    background: $surface;
+}
+
+ConfirmModal #message {
+    margin-bottom: 1;
+}
+
+TodoEditModal {
+    align: center middle;
+}
+
+TodoEditModal > #dialog {
+    width: 70;
+    height: auto;
+    padding: 1 2;
+    border: round $primary;
+    background: $surface;
+}
+
+TodoEditModal Label {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+TodoEditModal Input {
+    margin-bottom: 0;
+}
+
+TodoEditModal #buttons {
+    layout: horizontal;
+    height: 3;
+    align: right middle;
+    margin-top: 1;
+}
+
+TodoEditModal Button {
+    margin-left: 1;
+}
+
+TodoEditModal #error {
+    color: $error;
+    margin-top: 1;
+    display: none;
+}
+
+TodoEditModal #error.visible {
+    display: block;
+}
+
+HelpScreen {
+    align: center middle;
+}
+
+HelpScreen > #dialog {
+    width: 70;
+    height: auto;
+    padding: 1 2;
+    border: round $primary;
+    background: $surface;
+}

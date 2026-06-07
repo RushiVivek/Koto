@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0d0d12">
+    <title>koto</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen" hidden>
+        <div class="login-box">
+            <h1 class="brand">koto</h1>
+            <p class="brand-tag">your todos, anywhere</p>
+            <input type="password" id="token-input" placeholder="Token" autocomplete="off" aria-label="Token">
+            <button id="login-btn" class="btn btn-primary">Connect</button>
+            <p id="login-error" class="error" hidden role="alert"></p>
+        </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="screen" hidden>
+        <header>
+            <button id="back-btn" class="icon-btn" hidden aria-label="Back to workspaces">☰</button>
+            <button id="close-workspaces-btn" class="icon-btn" hidden aria-label="Close workspaces panel">✕</button>
+            <h1 id="header-title">Workspaces</h1>
+            <button id="logout-btn" class="icon-btn" aria-label="Log out">⏻</button>
+        </header>
+
+        <div id="layout">
+            <aside id="workspace-panel" aria-label="Workspaces">
+                <div id="workspace-list" role="list"></div>
+                <button id="add-workspace-btn" class="fab" aria-label="New workspace">+</button>
+            </aside>
+
+            <main id="todo-panel" aria-label="Todos">
+                <div id="todo-list" role="list"></div>
+                <button id="add-todo-btn" class="fab" hidden aria-label="New todo">+</button>
+            </main>
+        </div>
+    </div>
+
+    <!-- Context menu -->
+    <div id="context-menu" class="context-menu" hidden role="menu">
+        <button data-action="add-sub" role="menuitem">Add sub-todo</button>
+        <button data-action="edit" role="menuitem">Edit</button>
+        <button data-action="delete" role="menuitem" class="danger">Delete</button>
+    </div>
+
+    <!-- Bottom sheet -->
+    <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+    <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <h2 id="sheet-title">Add</h2>
+        <input type="text" id="sheet-input" placeholder="Description" aria-label="Description">
+        <div class="sheet-actions">
+            <button id="sheet-cancel" class="btn">Cancel</button>
+            <button id="sheet-save" class="btn btn-primary">Save</button>
+        </div>
+    </div>
+
+    <script src="/api.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
