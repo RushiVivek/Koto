@@ -1,0 +1,27 @@
+# koto Cloudflare Tunnel — ingress for koto.rushivivek.com
+#
+# Version-controlled, contains NO secrets. The tunnel credentials live in a
+# separate JSON created by `cloudflared tunnel create koto` and referenced by
+# `credentials-file` below — that JSON is a secret and is git-ignored.
+#
+# Install (see ../README.md for the full runbook):
+#   sudo install -d -m 700 /etc/cloudflared
+#   sudo cp config.yml /etc/cloudflared/config.yml
+#   sudo cp ~/.cloudflared/<TUNNEL_UUID>.json /etc/cloudflared/<TUNNEL_UUID>.json
+#   # edit credentials-file below to the real UUID path, then:
+#   sudo cloudflared service install
+#   sudo systemctl enable --now cloudflared
+
+tunnel: koto
+credentials-file: /etc/cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  # Point at 127.0.0.1, NOT "localhost": koto's uvicorn binds 0.0.0.0 (IPv4
+  # only), while "localhost" can resolve to ::1 (IPv6) first and fail to
+  # connect with a confusing 502. cloudflared proxies WebSockets (/ws)
+  # natively — no extra config needed.
+  - hostname: koto.rushivivek.com
+    service: http://127.0.0.1:8080
+
+  # Catch-all: anything else on this tunnel 404s. This tunnel serves only koto.
+  - service: http_status:404

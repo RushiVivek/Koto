@@ -1,0 +1,15 @@
+name = "koto-asleep"
+main = "src/worker.ts"
+compatibility_date = "2026-06-01"
+
+# Bind the route AFTER `wrangler deploy` succeeds. This Worker must own the
+# same hostname the tunnel publishes — Cloudflare runs the Worker first, then
+# the Worker's fetch() to the same host falls through to the tunnel origin.
+#
+# IMPORTANT: bind the apex path, not just "/*" on a sub-path — koto serves its
+# SPA, /api/*, and /ws all under the root, so the Worker must see every path.
+routes = [
+  { pattern = "koto.rushivivek.com/*", zone_name = "rushivivek.com" },
+]
+
+# No KV, no secrets, no vars. This Worker is pure pass-through + fallback.

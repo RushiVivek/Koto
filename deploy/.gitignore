@@ -1,0 +1,19 @@
+# --- Cloudflare Tunnel secrets — NEVER commit ---
+# Tunnel credentials JSON (private key for the named tunnel)
+cloudflared/*.json
+# cert.pem from `cloudflared tunnel login`
+cloudflared/cert.pem
+*.pem
+
+# --- Worker / wrangler ---
+node_modules/
+.wrangler/
+.dev.vars
+.env
+
+# Access service tokens, if ever written to a file
+*service-token*
+*.secret
+
+*.log
+.DS_Store
