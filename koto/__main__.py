@@ -69,7 +69,7 @@ def serve(
     "--server-url",
     default=None,
     envvar="KOTO_TUI_SERVER_URL",
-    help="koto server URL (default: http://localhost:8080)",
+    help="koto server URL (default: http://localhost:28080)",
 )
 @click.option(
     "--token",

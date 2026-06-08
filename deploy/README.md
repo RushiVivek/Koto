@@ -9,14 +9,15 @@ without needing Tailscale on every device.
 browser ──▶ Cloudflare Access (edge auth: Google / email OTP)
          ──▶ koto-asleep Worker (route owner: pass-through, or "napping" page)
          ──▶ Cloudflare Tunnel (cloudflared on the laptop)
-         ──▶ koto uvicorn @ 127.0.0.1:8080
+         ──▶ koto uvicorn @ 127.0.0.1:28080
 ```
 
 koto's FastAPI app is **untouched**. Everything here is infra/config.
 
-- **Port:** koto listens on `0.0.0.0:8080` (systemd unit `ExecStart … --port 8080`;
-  `KOTO_PORT` unset so the 8080 default holds). The tunnel ingress points at
-  `127.0.0.1:8080` — not `localhost`, to avoid an IPv6 (`::1`) mis-resolve.
+- **Port:** koto listens on `0.0.0.0:28080` (systemd unit `ExecStart … --port 28080`;
+  `KOTO_PORT` unset so the 28080 default holds). The tunnel ingress points at
+  `127.0.0.1:28080` — not `localhost`, to avoid an IPv6 (`::1`) mis-resolve.
+  Port 28080 chosen to avoid colliding with other local services on 8080.
 - **Bind note:** koto binds `0.0.0.0`, so it's reachable on the LAN too. That's
   the existing behaviour (Tailscale already used it). The tunnel adds public
   reach on top; it does not change koto's bind.
@@ -144,7 +145,7 @@ public URL.** Reasons:
 - The TUI is a **non-browser HTTP client** (httpx). It can't do the interactive
   Access login, so hitting `https://koto.rushivivek.com` would just bounce off
   the Access login redirect and fail.
-- You run the TUI **on the same laptop koto runs on** — so `http://localhost:8080`
+- You run the TUI **on the same laptop koto runs on** — so `http://localhost:28080`
   (its current default) is the correct, zero-latency, zero-auth-friction target.
   Nothing to change.
 - If you ever want the TUI from *another* device, use Tailscale (still works,
@@ -172,7 +173,7 @@ neither localhost nor Tailscale), the mechanism is an Access **service token**:
 **A. Happy path (origin up):**
 ```sh
 systemctl status cloudflared        # active
-curl -I http://127.0.0.1:8080/       # koto answering locally (200)
+curl -I http://127.0.0.1:28080/      # koto answering locally (200)
 ```
 In a browser: open `https://koto.rushivivek.com` → Access login → koto SPA loads.
 Create a workspace + todo. Open it on your phone (no Tailscale) → same login →

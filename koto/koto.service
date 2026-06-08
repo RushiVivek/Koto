@@ -18,7 +18,7 @@ StateDirectory=koto
 StateDirectoryMode=0700
 Environment=KOTO_DB_PATH=/var/lib/koto/koto.db
 
-ExecStart=/usr/bin/koto serve --host 0.0.0.0 --port 8080
+ExecStart=/usr/bin/koto serve --host 0.0.0.0 --port 28080
 Restart=on-failure
 RestartSec=5
 

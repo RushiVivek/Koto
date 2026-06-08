@@ -28,12 +28,12 @@ uv sync
 uv run koto serve --token <your-secret>
 ```
 
-Then open `http://<server-ip>:8080` in a browser.
+Then open `http://<server-ip>:28080` in a browser.
 
 ## TUI
 
 ```sh
-uv run koto tui --token <your-secret> --server-url http://<server-ip>:8080
+uv run koto tui --token <your-secret> --server-url http://<server-ip>:28080
 ```
 
 Or set `KOTO_TUI_TOKEN` and `KOTO_TUI_SERVER_URL` env vars (or put them in `[tui]` section of the config file).
@@ -88,7 +88,7 @@ TUI env vars: `KOTO_TUI_SERVER_URL`, `KOTO_TUI_TOKEN`, `KOTO_TUI_THEME`
 
 | Key | Default | Description |
 |---|---|---|
-| `server_url` | `http://localhost:8080` | koto server URL |
+| `server_url` | `http://localhost:28080` | koto server URL |
 | `token` | _(required)_ | auth token |
 | `theme` | `textual-dark` | one of: `textual-dark`, `textual-light`, `nord`, `gruvbox`, `dracula`, `tokyo-night`, `monokai`, `flexoki`, `catppuccin-{mocha,latte,frappe,macchiato}`, `solarized-{light,dark}`, `rose-pine{,-moon,-dawn}`, `atom-one-{dark,light}`, `ansi-{dark,light}` |
 | `show_clock` | `true` | show date+time in the header |

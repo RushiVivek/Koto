@@ -19,14 +19,14 @@ DEFAULT_CONFIG = """\
 # token = "change-me"
 
 host = "0.0.0.0"
-port = 8080
+port = 28080
 
 # Database file location. Defaults to the platform user-data dir.
 # db_path = "/var/lib/koto/koto.db"
 
 [tui]
 # URL of the koto server the TUI should connect to
-server_url = "http://localhost:8080"
+server_url = "http://localhost:28080"
 
 # Token for the TUI to authenticate with
 # token = "change-me"
@@ -94,7 +94,7 @@ class Settings:
             os.environ.get("KOTO_HOST") or server.get("host") or "0.0.0.0"
         )
         self.port: int = int(
-            os.environ.get("KOTO_PORT") or server.get("port") or 8080
+            os.environ.get("KOTO_PORT") or server.get("port") or 28080
         )
 
         db_dir = Path(user_data_dir("koto"))
@@ -109,7 +109,7 @@ class Settings:
         self.tui_server_url: str = (
             os.environ.get("KOTO_TUI_SERVER_URL")
             or tui.get("server_url")
-            or "http://localhost:8080"
+            or "http://localhost:28080"
         )
         self.tui_token: str = (
             os.environ.get("KOTO_TUI_TOKEN") or tui.get("token") or ""

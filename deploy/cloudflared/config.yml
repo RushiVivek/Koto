@@ -21,7 +21,7 @@ ingress:
   # connect with a confusing 502. cloudflared proxies WebSockets (/ws)
   # natively — no extra config needed.
   - hostname: koto.rushivivek.com
-    service: http://127.0.0.1:8080
+    service: http://127.0.0.1:28080
 
   # Catch-all: anything else on this tunnel 404s. This tunnel serves only koto.
   - service: http_status:404
