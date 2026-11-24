@@ -6,6 +6,7 @@ import asyncio
 from typing import Optional
 
 from datetime import datetime
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -19,6 +20,7 @@ from .screens.confirm_modal import ConfirmModal
 from .screens.help import HelpScreen
 from .screens.input_modal import InputModal
 from .screens.todo_edit import TodoEditModal
+from .state import UiState
 from .widgets.todo_tree import TodoTree
 from .widgets.workspace_tree import WorkspaceTree
 
@@ -102,6 +104,7 @@ class KotoApp(App):
         show_clock: bool = False,
         confirm_delete: bool = True,
         default_workspace_id: Optional[int] = None,
+        state_path: Optional[Path] = None,
     ):
         super().__init__()
         self.client = client
@@ -112,6 +115,8 @@ class KotoApp(App):
         self._show_clock = show_clock
         self._confirm_delete = confirm_delete
         self._default_workspace_id = default_workspace_id
+        # Fold state; persisted only when a path is given.
+        self._ui_state = UiState(state_path)
         # Clipboard for todo cut/copy/paste. `_clipboard` holds the todo
         # subtree snapshot; `_clipboard_op` is "cut" or "copy"; the
         # reactive `clipboard_cut_id` mirrors the cut id for rendering.
@@ -123,8 +128,8 @@ class KotoApp(App):
     def compose(self) -> ComposeResult:
         yield _DateHeader(show_clock=self._show_clock)
         with Horizontal(id="main"):
-            yield WorkspaceTree(id="workspace-tree")
-            yield TodoTree(id="todo-tree")
+            yield WorkspaceTree(id="workspace-tree", state=self._ui_state)
+            yield TodoTree(id="todo-tree", state=self._ui_state)
         yield Static("", id="toast")
         yield Footer()
 

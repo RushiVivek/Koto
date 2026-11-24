@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from platformdirs import user_config_dir, user_data_dir
+from platformdirs import user_config_dir, user_data_dir, user_state_dir
 
 
 DEFAULT_CONFIG = """\
@@ -121,6 +121,8 @@ class Settings:
         )
         self.tui_show_clock: bool = bool(tui.get("show_clock", True))
         self.tui_confirm_delete: bool = bool(tui.get("confirm_delete", True))
+        # Local UI state (folded nodes); not user-editable config.
+        self.tui_state_path: Path = Path(user_state_dir("koto")) / "tui_state.json"
         default_ws = tui.get("default_workspace_id")
         self.tui_default_workspace_id: int | None = (
             int(default_ws) if default_ws is not None else None

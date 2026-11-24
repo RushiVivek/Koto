@@ -115,6 +115,7 @@ def tui(
         show_clock=settings.tui_show_clock,
         confirm_delete=settings.tui_confirm_delete,
         default_workspace_id=settings.tui_default_workspace_id,
+        state_path=settings.tui_state_path,
     ).run()
 
 
