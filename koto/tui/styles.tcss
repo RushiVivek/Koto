@@ -18,6 +18,8 @@ WorkspaceTree {
 TodoTree {
     width: 1fr;
     padding: 0 1;
+    /* Rows are truncated/padded to the panel width; never scroll sideways. */
+    overflow-x: hidden;
 }
 
 WorkspaceTree:focus,

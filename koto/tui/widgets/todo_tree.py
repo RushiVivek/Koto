@@ -8,17 +8,15 @@ from typing import Optional
 from rich.style import Style
 from rich.text import Text
 from textual.binding import Binding
-from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
 from ...schemas import UNTITLED
 from ..parse import format_due, format_duration
+from .koto_tree import KotoTree
 
 
-class TodoTree(Tree):
+class TodoTree(KotoTree):
     """Tree of todos. Each node's `data` is the TodoOut dict."""
-
-    ALLOW_MAXIMIZE = False
 
     BINDINGS = [
         Binding("up", "cursor_up", "Up", show=False),
@@ -41,15 +39,10 @@ class TodoTree(Tree):
         Binding("escape", "focus_workspaces", "Workspaces", show=False),
     ]
 
+    CHILDREN_KEY = "todos"
+
     def __init__(self, **kwargs):
         super().__init__("Todos", **kwargs)
-        self.show_root = False
-        self.show_guides = True
-        self.guide_depth = 2
-        self.auto_expand = False
-        # Same expansion-state persistence as WorkspaceTree.
-        self._collapsed_ids: set[int] = set()
-        self._populating = False
         # Cut-styling: id of the todo currently in "cut" clipboard, or None.
         # Set by the app via `set_cut_id` so render_label can stay sync.
         self._cut_id: Optional[int] = None
@@ -90,8 +83,9 @@ class TodoTree(Tree):
 
         # Compute room available for the description so the meta columns
         # always start at the same x-position.
-        # `self.size.width` is the rendered width; subtract guides + checkbox
-        # + cut-marker + gap + meta strip.
+        # Use the width left after the vertical scrollbar (`size` includes
+        # it, which made rows overflow and summon a horizontal scrollbar);
+        # subtract guides + checkbox + cut-marker + gap + meta strip.
         depth = self._node_depth(node)
         guide_width = max(0, depth - 1) * self.guide_depth
         prefix_width = (
@@ -99,7 +93,7 @@ class TodoTree(Tree):
             + 2  # checkbox glyph + space
         )
         avail = (
-            self.size.width - guide_width - prefix_width
+            self.scrollable_content_region.width - guide_width - prefix_width
             - self.DESC_GAP - self._meta_strip_width
         )
         desc = todo.get("description") or UNTITLED
@@ -195,93 +189,16 @@ class TodoTree(Tree):
         done = sum(1 for c in children if not c.get("pending"))
         return Text(f"{done}/{len(children)}", style="dim")
 
+    def watch_show_vertical_scrollbar(self) -> None:
+        # Row width depends on the scrollbar; re-render when it toggles.
+        self._invalidate()
+
     def set_cut_id(self, cut_id: Optional[int]) -> None:
         self._cut_id = cut_id
         self._invalidate()
 
     def _is_cut(self, todo: dict) -> bool:
         return self._cut_id is not None and todo.get("id") == self._cut_id
-
-    # ---------- population ----------
-
-    def populate(self, todos: list[dict]) -> None:
-        if self._structure_matches(todos):
-            self._refresh_data(self.root, todos)
-            return
-        self._populating = True
-        try:
-            self.clear()
-            for todo in todos:
-                self._add_todo(self.root, todo)
-        finally:
-            self._populating = False
-        # Place cursor on first node so that key actions have a target.
-        if self.root.children:
-            self.select_node(self.root.children[0])
-
-    def _structure_matches(self, todos: list[dict]) -> bool:
-        def walk(nodes, items):
-            if len(nodes) != len(items):
-                return False
-            for n, item in zip(nodes, items):
-                if not n.data or n.data.get("id") != item["id"]:
-                    return False
-                if not walk(n.children, item.get("todos") or []):
-                    return False
-            return True
-        return walk(self.root.children, todos)
-
-    def _refresh_data(self, node: TreeNode, items: list[dict]) -> None:
-        for child_node, item in zip(node.children, items):
-            child_node.data = item
-            self._refresh_data(child_node, item.get("todos") or [])
-        self._invalidate()
-
-    def _add_todo(self, parent_node: TreeNode, todo: dict) -> TreeNode:
-        expanded = todo["id"] not in self._collapsed_ids
-        node = parent_node.add(
-            todo.get("description") or UNTITLED, data=todo, expand=expanded
-        )
-        for child in todo.get("todos") or []:
-            self._add_todo(node, child)
-        return node
-
-    def on_tree_node_collapsed(self, event) -> None:
-        if self._populating:
-            return
-        todo = event.node.data
-        if todo:
-            self._collapsed_ids.add(todo["id"])
-
-    def on_tree_node_expanded(self, event) -> None:
-        if self._populating:
-            return
-        todo = event.node.data
-        if todo:
-            self._collapsed_ids.discard(todo["id"])
-
-    def find_node(self, todo_id: int) -> Optional[TreeNode]:
-        def walk(n: TreeNode):
-            for child in n.children:
-                if child.data and child.data.get("id") == todo_id:
-                    return child
-                found = walk(child)
-                if found:
-                    return found
-            return None
-        return walk(self.root)
-
-    def select_id(self, todo_id: Optional[int]) -> None:
-        if todo_id is None:
-            return
-        node = self.find_node(todo_id)
-        if node is not None:
-            self.select_node(node)
-
-    @property
-    def current(self) -> Optional[dict]:
-        node = self.cursor_node
-        return node.data if node else None
 
     # ---------- actions ----------
 
@@ -330,25 +247,8 @@ class TodoTree(Tree):
     def action_reorder_up(self) -> None:
         self._emit("reorder_up")
 
-    def action_left_arrow(self) -> None:
-        # If cursor is on a sub-todo, jump to its parent. Otherwise focus
-        # the workspace panel.
-        node = self.cursor_node
-        if node and node.parent and node.parent.data:
-            self.select_node(node.parent)
-        else:
-            self.app.action_focus_workspaces()  # type: ignore[attr-defined]
+    def on_left_at_top(self) -> None:
+        self.app.action_focus_workspaces()  # type: ignore[attr-defined]
 
     def action_focus_workspaces(self) -> None:
         self.app.action_focus_workspaces()  # type: ignore[attr-defined]
-
-    def action_right_arrow(self) -> None:
-        # If cursor has children, jump to the first one (expand if needed).
-        # Otherwise no-op.
-        node = self.cursor_node
-        if not node:
-            return
-        if node.children:
-            if not node.is_expanded:
-                node.expand()
-            self.select_node(node.children[0])

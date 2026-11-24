@@ -478,3 +478,111 @@ async def test_selection_preserved_across_refresh():
         await pilot.press("r")
         await pilot.pause()
         assert app.selected_todo_id == 101  # still selected
+
+
+def _todo(todo_id: int, ws_id: int, children: list[dict] | None = None, **kw) -> dict:
+    return {
+        "id": todo_id, "order_index": 0, "description": f"task{todo_id}",
+        "due": None, "effort": 0, "recurrence_seconds": None, "urgency": 1,
+        "pending": True, "parent_workspace_id": ws_id, "parent_todo_id": None,
+        "todos": children or [], **kw,
+    }
+
+
+def _track_opens(app: KotoApp) -> list:
+    """Record every value current_workspace_id is set to."""
+    opened: list = []
+    orig = KotoApp.watch_current_workspace_id
+
+    def spy(self, old, new):
+        opened.append(new)
+        orig(self, old, new)
+    app.watch_current_workspace_id = spy.__get__(app)
+    return opened
+
+
+async def test_tree_rebuild_keeps_current_workspace():
+    """A structural change (new workspace) rebuilds the tree; the rebuild's
+    cursor placement must not open another workspace, even briefly."""
+    client = FakeClient()
+    client.workspaces.extend([
+        {"id": 1, "order_index": 0, "description": "A"},
+        {"id": 2, "order_index": 1, "description": "B"},
+    ])
+    app = KotoApp(client=client, default_workspace_id=2)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert app.current_workspace_id == 2
+        opened = _track_opens(app)
+        await client.create_workspace("C")
+        await app._refresh()
+        await pilot.pause()
+        assert opened == []
+        assert app.current_workspace_id == 2
+        assert app.query_one(WorkspaceTree).current["id"] == 2
+
+
+async def test_arrow_into_sub_workspace_only_moves_cursor():
+    client = FakeClient()
+    client.workspaces.append({"id": 1, "order_index": 0, "description": "A"})
+    nested = [{
+        **client._ws_dict(client.workspaces[0]),
+        "workspaces": [{**client._ws_dict(
+            {"id": 2, "order_index": 0, "description": "A.1"}), "workspaces": []}],
+    }]
+
+    async def list_workspaces():
+        return nested
+    client.list_workspaces = list_workspaces
+
+    app = KotoApp(client=client)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(WorkspaceTree)
+        tree.focus()
+        opened = _track_opens(app)
+        await pilot.press("right")
+        await pilot.pause()
+        assert tree.current["id"] == 2
+        await pilot.press("left")
+        await pilot.pause()
+        assert tree.current["id"] == 1
+        assert opened == []
+        assert app.current_workspace_id == 1
+
+
+async def test_fold_state_persists_across_runs(tmp_path):
+    state_path = tmp_path / "tui_state.json"
+    client = FakeClient()
+    client.workspaces.append({"id": 1, "order_index": 0, "description": "W"})
+    client.todos[1] = [_todo(10, 1, children=[_todo(11, None)])]
+
+    app = KotoApp(client=client, state_path=state_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(TodoTree)
+        assert tree.find_node(10).is_expanded
+        tree.focus()
+        tree.select_id(10)
+        await pilot.press("o")
+        await pilot.pause()
+        assert not tree.find_node(10).is_expanded
+    assert state_path.exists()
+
+    app = KotoApp(client=client, state_path=state_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert not app.query_one(TodoTree).find_node(10).is_expanded
+
+
+async def test_many_todos_no_horizontal_scrollbar():
+    client = FakeClient()
+    client.workspaces.append({"id": 1, "order_index": 0, "description": "W"})
+    client.todos[1] = [_todo(i, 1) for i in range(1, 60)]
+    app = KotoApp(client=client)
+    async with app.run_test(size=(100, 20)) as pilot:
+        await pilot.pause()
+        tree = app.query_one(TodoTree)
+        assert tree.show_vertical_scrollbar
+        assert not tree.show_horizontal_scrollbar
+        assert tree.virtual_size.width <= tree.scrollable_content_region.width
