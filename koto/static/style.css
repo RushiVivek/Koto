@@ -9,7 +9,7 @@
 
     --text: #e8e8ea;
     --text-dim: #a0a3ad;
-    --text-faint: #61646e;
+    --text-faint: #7d818c; /* ≥4.5:1 on --bg and --surface */
 
     --accent: #2dd4bf;
     --accent-soft: rgba(45, 212, 191, 0.12);
@@ -179,8 +179,8 @@ header h1 {
 }
 
 .icon-btn {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,6 +194,8 @@ header h1 {
     background: var(--surface-2);
     color: var(--text);
 }
+
+.icon-btn:active { background: var(--surface-3); }
 
 .icon-btn.small {
     width: 1.75rem;
@@ -361,6 +363,14 @@ header h1 {
     transition: all 0.15s;
 }
 
+.checkbox { position: relative; }
+.checkbox::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+}
+
 .checkbox:hover { border-color: var(--accent); }
 
 .checkbox.checked {
@@ -479,7 +489,9 @@ header h1 {
     transition: transform 0.1s;
 }
 
+.fab:hover { background: #4ee3d0; }
 .fab:active { transform: scale(0.94); }
+.fab svg { width: 24px; height: 24px; }
 
 /* ============ Context menu ============ */
 
@@ -643,4 +655,14 @@ header h1 {
 @keyframes toast-out {
     from { transform: translateY(0); opacity: 1; }
     to { transform: translateY(8px); opacity: 0; }
+}
+
+/* ============ Reduced motion ============ */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

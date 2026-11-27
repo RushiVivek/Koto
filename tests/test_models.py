@@ -63,6 +63,44 @@ def test_todo_order_index_assigned_under_parent_todo(session):
     assert c2.order_index == 1
 
 
+def _order(session, ws_id=None, parent_todo_id=None) -> list[str]:
+    session.expire_all()
+    q = session.query(Todo)
+    q = q.filter_by(parent_workspace_id=ws_id) if ws_id else q.filter_by(parent_todo_id=parent_todo_id)
+    return [t.description for t in q.order_by(Todo.order_index)]
+
+
+def test_new_todo_goes_above_trailing_completed(session):
+    ws = _make_workspace(session)
+    _make_todo(session, parent_workspace_id=ws.id, description="a")
+    _make_todo(session, parent_workspace_id=ws.id, description="done1", pending=False)
+    _make_todo(session, parent_workspace_id=ws.id, description="done2", pending=False)
+    _make_todo(session, parent_workspace_id=ws.id, description="b")
+    assert _order(session, ws_id=ws.id) == ["a", "b", "done1", "done2"]
+
+
+def test_new_todo_keeps_completed_in_middle(session):
+    # Only the trailing completed run is skipped; a done todo between
+    # pending ones stays where the user put it.
+    ws = _make_workspace(session)
+    _make_todo(session, parent_workspace_id=ws.id, description="a")
+    x = _make_todo(session, parent_workspace_id=ws.id, description="x")
+    _make_todo(session, parent_workspace_id=ws.id, description="b")
+    x.pending = False
+    session.commit()
+    _make_todo(session, parent_workspace_id=ws.id, description="c")
+    assert _order(session, ws_id=ws.id) == ["a", "x", "b", "c"]
+
+
+def test_new_subtodo_goes_above_completed(session):
+    ws = _make_workspace(session)
+    parent = _make_todo(session, parent_workspace_id=ws.id, description="p")
+    _make_todo(session, parent_todo_id=parent.id, description="a")
+    _make_todo(session, parent_todo_id=parent.id, description="done", pending=False)
+    _make_todo(session, parent_todo_id=parent.id, description="b")
+    assert _order(session, parent_todo_id=parent.id) == ["a", "b", "done"]
+
+
 def test_completion_propagates_down(session):
     ws = _make_workspace(session)
     parent = _make_todo(session, parent_workspace_id=ws.id, description="parent")

@@ -119,20 +119,35 @@ def fix_workspace_order(_, connection, target: Workspace):
 
 @event.listens_for(Todo, "before_insert")
 def fix_todo_order(_, connection, target: Todo):
-    if target.order_index is None or target.order_index == -1:
-        if target.parent_workspace_id:
-            result = connection.execute(
-                text(
-                    "SELECT COUNT(*) FROM todo WHERE parent_workspace_id = :pid"
-                ),
-                {"pid": target.parent_workspace_id},
-            )
-        else:
-            result = connection.execute(
-                text("SELECT COUNT(*) FROM todo WHERE parent_todo_id = :pid"),
-                {"pid": target.parent_todo_id},
-            )
-        target.order_index = result.scalar() or 0
+    """Place a new todo after its pending siblings but above the completed
+    ones trailing the list, shifting those down by one."""
+    if target.order_index is not None and target.order_index != -1:
+        return
+    if target.parent_workspace_id:
+        parent_col, parent_id = "parent_workspace_id", target.parent_workspace_id
+    else:
+        parent_col, parent_id = "parent_todo_id", target.parent_todo_id
+    siblings = connection.execute(
+        text(
+            f"SELECT id, order_index, pending FROM todo WHERE {parent_col} = :pid "
+            "ORDER BY order_index, id"
+        ),
+        {"pid": parent_id},
+    ).all()
+    trailing_done = []
+    for row in reversed(siblings):
+        if row.pending:
+            break
+        trailing_done.append(row.id)
+    if not trailing_done or target.pending is False:
+        target.order_index = (siblings[-1].order_index + 1) if siblings else 0
+        return
+    target.order_index = siblings[len(siblings) - len(trailing_done)].order_index
+    connection.execute(
+        update(Todo)
+        .where(Todo.id.in_(trailing_done))
+        .values(order_index=Todo.order_index + 1)
+    )
 
 
 @event.listens_for(Todo, "after_insert")

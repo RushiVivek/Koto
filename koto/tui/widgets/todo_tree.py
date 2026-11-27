@@ -46,6 +46,13 @@ class TodoTree(KotoTree):
         # Cut-styling: id of the todo currently in "cut" clipboard, or None.
         # Set by the app via `set_cut_id` so render_label can stay sync.
         self._cut_id: Optional[int] = None
+        # Marquee for the highlighted todo when its description is truncated.
+        self._marquee_tick = 0
+        # Indices into `_columns()` that at least one todo has a value for.
+        self._active_cols: list[int] = []
+
+    def on_mount(self) -> None:
+        self.set_interval(self.MARQUEE_INTERVAL, self._advance_marquee)
 
     # ---------- rendering ----------
 
@@ -59,13 +66,43 @@ class TodoTree(KotoTree):
     COL_GAP = 2  # spaces between columns
     DESC_GAP = 4  # spaces between description and the meta strip
 
+    # Marquee: seconds per step, steps to rest at the start, separator
+    # between the end of the text and its repeat.
+    MARQUEE_INTERVAL = 0.2
+    MARQUEE_HOLD = 8
+    MARQUEE_SEP = "   •   "
+
+    def _columns(self) -> list[tuple]:
+        return [
+            (self._due_text, self.COL_DUE),
+            (self._urgency_text, self.COL_URG),
+            (self._effort_text, self.COL_EFFORT),
+            (self._recur_text, self.COL_RECUR),
+            (self._progress_text, self.COL_PROGRESS),
+        ]
+
+    def populate(self, items: list[dict]) -> None:
+        # Only show meta columns some todo actually uses, so descriptions
+        # get the width of the empty ones.
+        todos: list[dict] = []
+        stack = list(items)
+        while stack:
+            t = stack.pop()
+            todos.append(t)
+            stack.extend(t.get("todos") or [])
+        self._active_cols = [
+            i for i, (fn, _) in enumerate(self._columns())
+            if any(fn(t).cell_len for t in todos)
+        ]
+        super().populate(items)
+
     @property
     def _meta_strip_width(self) -> int:
-        return (
-            self.COL_DUE + self.COL_URG + self.COL_EFFORT
-            + self.COL_RECUR + self.COL_PROGRESS
-            + self.COL_GAP * 4
-        )
+        cols = self._columns()
+        widths = [cols[i][1] for i in self._active_cols]
+        if not widths:
+            return 0
+        return sum(widths) + self.COL_GAP * (len(widths) - 1) + self.DESC_GAP
 
     def render_label(
         self, node: TreeNode, base_style: Style, style: Style
@@ -94,17 +131,23 @@ class TodoTree(KotoTree):
         )
         avail = (
             self.scrollable_content_region.width - guide_width - prefix_width
-            - self.DESC_GAP - self._meta_strip_width
+            - self._meta_strip_width
         )
         desc = todo.get("description") or UNTITLED
         if avail > 0 and len(desc) > avail:
-            desc = desc[: max(1, avail - 1)] + "…"
+            if node is self.cursor_node and self.has_focus:
+                desc = self._marquee_window(desc, avail)
+            else:
+                desc = desc[: max(1, avail - 1)] + "…"
         actual_desc_cells = len(desc)
 
         if not todo.get("pending"):
             text.append(desc, style="strike dim")
         else:
             text.append(desc)
+
+        if not self._active_cols:
+            return text
 
         # Pad to fill the description column so meta starts at a consistent x.
         # If avail is unknown (size not yet set) just use a short gap.
@@ -113,19 +156,47 @@ class TodoTree(KotoTree):
         if pad_to_meta > 0:
             text.append(" " * pad_to_meta)
 
-        # Right-aligned columns separated by 2 spaces.
-        gap = " " * self.COL_GAP
-        text.append_text(self._col(self._due_text(todo), self.COL_DUE))
-        text.append(gap)
-        text.append_text(self._col(self._urgency_text(todo), self.COL_URG))
-        text.append(gap)
-        text.append_text(self._col(self._effort_text(todo), self.COL_EFFORT))
-        text.append(gap)
-        text.append_text(self._col(self._recur_text(todo), self.COL_RECUR))
-        text.append(gap)
-        text.append_text(self._col(self._progress_text(todo), self.COL_PROGRESS))
+        # Right-aligned columns separated by COL_GAP spaces.
+        cols = self._columns()
+        for n, i in enumerate(self._active_cols):
+            if n:
+                text.append(" " * self.COL_GAP)
+            fn, width = cols[i]
+            text.append_text(self._col(fn(todo), width))
 
         return text
+
+    def _marquee_window(self, desc: str, width: int) -> str:
+        """`width` chars of `desc`, scrolled by the current marquee tick.
+
+        Rests at the start for MARQUEE_HOLD ticks, then scrolls through the
+        text and wraps around seamlessly to the start again.
+        """
+        loop = desc + self.MARQUEE_SEP
+        phase = self._marquee_tick % (self.MARQUEE_HOLD + len(loop))
+        offset = max(0, phase - self.MARQUEE_HOLD)
+        return (loop + loop)[offset: offset + width]
+
+    def _advance_marquee(self) -> None:
+        node = self.cursor_node
+        if node is None or not node.data or not self.has_focus:
+            return
+        self._marquee_tick += 1
+        node.refresh()
+
+    def watch_cursor_line(self, previous_line: int, line: int) -> None:
+        previous = self._get_node(previous_line)
+        super().watch_cursor_line(previous_line, line)
+        if previous_line != line:
+            # Restart the marquee; repaint the old row truncated again.
+            self._marquee_tick = 0
+            if previous is not None:
+                previous.refresh()
+
+    def on_blur(self) -> None:
+        self._marquee_tick = 0
+        if self.cursor_node is not None:
+            self.cursor_node.refresh()
 
     @staticmethod
     def _node_depth(node: TreeNode) -> int:

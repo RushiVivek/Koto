@@ -4,6 +4,16 @@ Screen {
     background: $surface;
 }
 
+/* `Screen` above also matches modal screens, which made every dialog's
+   backdrop opaque (hiding the app) in all but the ANSI themes. Restore a
+   translucent backdrop so the app stays visible, dimmed, behind dialogs. */
+ModalScreen {
+    background: $background 60%;
+    &:ansi {
+        background: transparent;
+    }
+}
+
 #main {
     layout: horizontal;
     height: 1fr;
@@ -48,64 +58,52 @@ TodoTree:focus {
     background: $primary 30%;
 }
 
-InputModal {
+/* ---------- Dialogs: one shared look for every modal ---------- */
+
+ModalScreen {
     align: center middle;
 }
 
-InputModal > #dialog {
-    width: 60;
+ModalScreen > #dialog {
+    width: 64;
+    max-width: 95%;
     height: auto;
+    max-height: 95%;
     padding: 1 2;
     border: round $primary;
+    border-title-color: $primary;
+    border-title-style: bold;
     background: $surface;
 }
 
-InputModal #title {
-    color: $primary;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-InputModal Input {
-    margin-bottom: 1;
-}
-
-InputModal #buttons {
+ModalScreen #buttons {
     layout: horizontal;
-    height: 3;
+    height: auto;
     align: right middle;
+    margin-top: 1;
 }
 
-InputModal Button {
+ModalScreen #buttons Button {
     margin-left: 1;
+    min-width: 12;
 }
 
-ConfirmModal {
-    align: center middle;
+ModalScreen #hint {
+    width: 1fr;
+    height: 3;
+    content-align: left middle;
+    color: $text-muted;
 }
 
+/* Destructive dialogs swap the accent for the error colour. */
 ConfirmModal > #dialog {
-    width: 60;
-    height: auto;
-    padding: 1 2;
     border: round $error;
-    background: $surface;
+    border-title-color: $error;
 }
 
-ConfirmModal #message {
-    margin-bottom: 1;
-}
-
-TodoEditModal {
-    align: center middle;
-}
-
-TodoEditModal > #dialog {
-    width: 70;
-    height: auto;
-    padding: 1 2;
-    border: round $primary;
-    background: $surface;
+ConfirmModal #detail {
+    color: $text-muted;
+    margin-top: 1;
 }
 
 TodoEditModal Label {
@@ -113,19 +111,8 @@ TodoEditModal Label {
     margin-top: 1;
 }
 
-TodoEditModal Input {
-    margin-bottom: 0;
-}
-
-TodoEditModal #buttons {
-    layout: horizontal;
-    height: 3;
-    align: right middle;
-    margin-top: 1;
-}
-
-TodoEditModal Button {
-    margin-left: 1;
+TodoEditModal Label.first {
+    margin-top: 0;
 }
 
 TodoEditModal #error {
@@ -138,14 +125,6 @@ TodoEditModal #error.visible {
     display: block;
 }
 
-HelpScreen {
-    align: center middle;
-}
-
 HelpScreen > #dialog {
-    width: 70;
-    height: auto;
-    padding: 1 2;
-    border: round $primary;
-    background: $surface;
+    width: 76;
 }

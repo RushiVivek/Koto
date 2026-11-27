@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d0d12">
     <title>koto</title>
@@ -23,21 +23,21 @@
     <!-- Main Screen -->
     <div id="main-screen" class="screen" hidden>
         <header>
-            <button id="back-btn" class="icon-btn" hidden aria-label="Back to workspaces">☰</button>
-            <button id="close-workspaces-btn" class="icon-btn" hidden aria-label="Close workspaces panel">✕</button>
+            <button id="back-btn" class="icon-btn" hidden aria-label="Back to workspaces"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            <button id="close-workspaces-btn" class="icon-btn" hidden aria-label="Close workspaces panel"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             <h1 id="header-title">Workspaces</h1>
-            <button id="logout-btn" class="icon-btn" aria-label="Log out">⏻</button>
+            <button id="logout-btn" class="icon-btn" aria-label="Log out"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
         </header>
 
         <div id="layout">
             <aside id="workspace-panel" aria-label="Workspaces">
                 <div id="workspace-list" role="list"></div>
-                <button id="add-workspace-btn" class="fab" aria-label="New workspace">+</button>
+                <button id="add-workspace-btn" class="fab" aria-label="New workspace"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
             </aside>
 
             <main id="todo-panel" aria-label="Todos">
                 <div id="todo-list" role="list"></div>
-                <button id="add-todo-btn" class="fab" hidden aria-label="New todo">+</button>
+                <button id="add-todo-btn" class="fab" hidden aria-label="New todo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
             </main>
         </div>
     </div>

@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
@@ -30,7 +30,17 @@ class TodoEditModal(ModalScreen[Optional[dict]]):
       - recurrence: empty -> null (clear); short form parsed via parse_duration
     """
 
-    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel"),
+        Binding("down", "move(1)", show=False),
+        Binding("up", "move(-1)", show=False),
+        # Inputs consume left/right for their text cursor, so these only
+        # fire with a button focused.
+        Binding("left", "switch_button", show=False),
+        Binding("right", "switch_button", show=False),
+    ]
+
+    FIELDS = ("#desc", "#due", "#urgency", "#effort", "#recurrence")
 
     def __init__(self, todo: dict):
         super().__init__()
@@ -51,9 +61,10 @@ class TodoEditModal(ModalScreen[Optional[dict]]):
             else ""
         )
 
-        with Vertical(id="dialog"):
-            yield Static("Edit todo", id="title")
-            yield Label("Description")
+        dialog = Vertical(id="dialog")
+        dialog.border_title = "Edit todo"
+        with dialog:
+            yield Label("Description", classes="first")
             yield Input(value=t.get("description") or "", id="desc")
             yield Label("Due (e.g. 2026-06-15, 2026-06-15 14:30, today, +3d, blank to clear)")
             yield Input(value=due_init, id="due")
@@ -64,7 +75,8 @@ class TodoEditModal(ModalScreen[Optional[dict]]):
             yield Label("Recurrence (e.g. 1d, 3d, 2w, 12h, blank to clear)")
             yield Input(value=recur_init, id="recurrence")
             yield Static("", id="error")
-            with Vertical(id="buttons"):
+            with Horizontal(id="buttons"):
+                yield Static("esc", id="hint")
                 yield Button("Cancel", id="cancel")
                 yield Button("Save", variant="primary", id="save")
 
@@ -76,6 +88,27 @@ class TodoEditModal(ModalScreen[Optional[dict]]):
             self._save()
         else:
             self.dismiss(None)
+
+    def action_move(self, step: int) -> None:
+        """Up/down through the fields; past the last field lands on Save."""
+        focused = self.focused
+        if isinstance(focused, Button):
+            if step < 0:
+                self.query_one(self.FIELDS[-1], Input).focus()
+            return
+        ids = [f.lstrip("#") for f in self.FIELDS]
+        if focused is None or focused.id not in ids:
+            return
+        i = ids.index(focused.id) + step
+        if i >= len(ids):
+            self.query_one("#save", Button).focus()
+        elif i >= 0:
+            self.query_one(self.FIELDS[i], Input).focus()
+
+    def action_switch_button(self) -> None:
+        if isinstance(self.focused, Button):
+            other = "#cancel" if self.focused.id == "save" else "#save"
+            self.query_one(other, Button).focus()
 
     def action_cancel(self) -> None:
         self.dismiss(None)
