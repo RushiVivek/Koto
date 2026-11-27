@@ -123,6 +123,10 @@ class KotoApp(App):
         self._clipboard: Optional[dict] = None
         self._clipboard_op: Optional[str] = None
 
+    def _remember_theme(self, theme) -> None:
+        self._ui_state.theme = theme.name
+        self._ui_state.save()
+
     # ---------- compose / mount ----------
 
     def compose(self) -> ComposeResult:
@@ -134,9 +138,17 @@ class KotoApp(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        # Apply configured theme if it's known; fall back silently otherwise.
-        if self._initial_theme and self._initial_theme in self._registered_themes:
-            self.theme = self._initial_theme
+        # The theme last picked in the TUI wins over the config default.
+        # Unknown names are ignored silently.
+        for theme in (self._ui_state.theme, self._initial_theme):
+            if theme and theme in self._registered_themes:
+                self.theme = theme
+                break
+        # From here on, theme changes are the user's: remember them. The
+        # change above is announced via call_next, so subscribe after it.
+        self.call_next(
+            self.theme_changed_signal.subscribe, self, self._remember_theme
+        )
         if self._default_workspace_id is not None:
             self.current_workspace_id = self._default_workspace_id
         self.query_one(WorkspaceTree).focus()
@@ -348,8 +360,10 @@ class KotoApp(App):
             if self._confirm_delete:
                 confirmed = await self.push_screen_wait(
                     ConfirmModal(
-                        f'Delete workspace "{current.get("description") or "Untitled"}" '
-                        f"and all its todos?"
+                        current.get("description") or "Untitled",
+                        title="Delete workspace?",
+                        detail="Its todos and sub-workspaces are deleted too.",
+                        confirm_label="Delete",
                     )
                 )
                 if not confirmed:
@@ -425,7 +439,13 @@ class KotoApp(App):
             if self._confirm_delete:
                 confirmed = await self.push_screen_wait(
                     ConfirmModal(
-                        f'Delete todo "{current.get("description") or "Untitled"}"?'
+                        current.get("description") or "Untitled",
+                        title="Delete todo?",
+                        detail=(
+                            "Its sub-todos are deleted too."
+                            if current.get("todos") else ""
+                        ),
+                        confirm_label="Delete",
                     )
                 )
                 if not confirmed:

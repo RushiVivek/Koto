@@ -586,3 +586,141 @@ async def test_many_todos_no_horizontal_scrollbar():
         assert tree.show_vertical_scrollbar
         assert not tree.show_horizontal_scrollbar
         assert tree.virtual_size.width <= tree.scrollable_content_region.width
+
+
+LONG = "start " + "word " * 60 + "finish"
+
+
+async def test_highlighted_long_todo_scrolls_to_reveal_full_text():
+    client = FakeClient()
+    ws = await client.create_workspace("W")
+    await client.create_todo(LONG, parent_workspace_id=ws["id"])
+    await client.create_todo(LONG, parent_workspace_id=ws["id"])
+    app = KotoApp(client=client, default_workspace_id=ws["id"])
+    async with app.run_test(size=(100, 20)) as pilot:
+        await pilot.pause()
+        tree = app.query_one(TodoTree)
+        tree.focus()
+        await pilot.pause()
+        first, second = tree.root.children
+
+        def label(node):
+            return tree.render_label(node, tree.rich_style, tree.rich_style).plain
+
+        assert not label(first).rstrip().endswith("…")  # marquee window
+        assert label(second).rstrip().endswith("…")  # not highlighted: truncated
+
+        tree._marquee_tick = tree.MARQUEE_HOLD + len(LONG) - 10
+        assert "finish" in label(first)
+
+        # Moving the cursor restarts the marquee from the beginning.
+        await pilot.press("down")
+        await pilot.pause()
+        assert label(second).lstrip().startswith("☐ start")
+
+
+async def test_modal_backdrop_is_translucent_in_colour_themes():
+    from koto.tui.screens.input_modal import InputModal
+
+    app = KotoApp(client=FakeClient(), theme="nord")
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.push_screen(InputModal("New todo"))
+        await pilot.pause()
+        assert app.screen.styles.background.a < 1
+
+
+async def test_confirm_modal_arrow_keys_switch_buttons():
+    from koto.tui.screens.confirm_modal import ConfirmModal
+
+    app = KotoApp(client=FakeClient())
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.push_screen(ConfirmModal("x", title="Delete todo?"))
+        await pilot.pause()
+        assert app.focused.id == "no"
+        await pilot.press("right")
+        assert app.focused.id == "yes"
+        await pilot.press("left")
+        assert app.focused.id == "no"
+
+
+async def test_picked_theme_is_restored_on_next_launch(tmp_path):
+    state = tmp_path / "tui_state.json"
+    app = KotoApp(client=FakeClient(), theme="nord", state_path=state)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert app.theme == "nord"
+        # The config default alone is not saved as a user choice.
+        assert not state.exists() or "theme" not in state.read_text()
+        app.theme = "gruvbox"
+        await pilot.pause()
+
+    app = KotoApp(client=FakeClient(), theme="nord", state_path=state)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert app.theme == "gruvbox"
+
+
+async def test_dialogs_share_one_width():
+    from koto.tui.screens.confirm_modal import ConfirmModal
+    from koto.tui.screens.input_modal import InputModal
+
+    app = KotoApp(client=FakeClient())
+    widths = []
+    async with app.run_test(size=(120, 40)) as pilot:
+        for screen in (InputModal("New todo"), ConfirmModal("x", title="Delete?")):
+            app.push_screen(screen)
+            await pilot.pause()
+            widths.append(app.screen.query_one("#dialog").outer_size.width)
+            app.pop_screen()
+            await pilot.pause()
+    assert widths[0] == widths[1]
+
+
+async def test_input_modal_arrow_keys_move_between_input_and_buttons():
+    from koto.tui.screens.input_modal import InputModal
+
+    app = KotoApp(client=FakeClient())
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.push_screen(InputModal("New todo", initial="ab"))
+        await pilot.pause()
+        inp = app.focused
+        assert inp.id == "input"
+        await pilot.press("end", "left")  # moves the text cursor, not focus
+        assert app.focused.id == "input"
+        assert inp.cursor_position == 1
+        await pilot.press("down")
+        assert app.focused.id == "save"
+        await pilot.press("left")
+        assert app.focused.id == "cancel"
+        await pilot.press("right")
+        assert app.focused.id == "save"
+        await pilot.press("up")
+        assert app.focused.id == "input"
+
+
+async def test_edit_modal_arrow_keys_walk_fields_and_buttons():
+    from koto.tui.screens.todo_edit import TodoEditModal
+
+    todo = {"id": 1, "description": "ab", "urgency": 1, "effort": 0}
+    app = KotoApp(client=FakeClient())
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        app.push_screen(TodoEditModal(todo))
+        await pilot.pause()
+        assert app.focused.id == "desc"
+        await pilot.press("up")  # stays on the first field
+        assert app.focused.id == "desc"
+        for expected in ("due", "urgency", "effort", "recurrence", "save"):
+            await pilot.press("down")
+            assert app.focused.id == expected
+        await pilot.press("left")
+        assert app.focused.id == "cancel"
+        await pilot.press("right")
+        assert app.focused.id == "save"
+        await pilot.press("up")
+        assert app.focused.id == "recurrence"
+        await pilot.press("up")
+        assert app.focused.id == "effort"

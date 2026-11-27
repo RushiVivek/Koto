@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
@@ -63,9 +63,12 @@ class HelpScreen(ModalScreen[None]):
     BINDINGS = [Binding("escape,q,?", "close", "Close")]
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="dialog"):
+        dialog = Vertical(id="dialog")
+        dialog.border_title = "Help"
+        with dialog:
             yield Static(HELP_TEXT, id="help")
-            yield Button("Close", id="close")
+            with Horizontal(id="buttons"):
+                yield Button("Close", id="close")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(None)
